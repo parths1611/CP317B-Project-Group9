@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Sign in · Car Rental System{% endblock %}
+{% block main_class %}auth-page{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-logo" aria-hidden="true">
+    <svg viewBox="0 0 24 24" class="icon"><path d="M5 17h14M6 17l1.5-5h9L18 17M5 17v2M19 17v2M8 12l1-3h6l1 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+  <h1 class="auth-title">Car Rental System</h1>
+  <p class="muted small center">University Software Engineering Project</p>
+
+  <div class="card auth-card">
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-login" aria-controls="panel-login"
+              aria-selected="{{ 'true' if tab == 'login' else 'false' }}">Login</button>
+      <button type="button" role="tab" id="tab-signup" aria-controls="panel-signup"
+              aria-selected="{{ 'true' if tab == 'signup' else 'false' }}">Sign Up</button>
+    </div>
+
+    <form id="panel-login" role="tabpanel" aria-labelledby="tab-login" method="post"
+          action="{{ url_for('login', next=request.args.get('next')) }}" {% if tab != 'login' %}hidden{% endif %}>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label for="login-email">Email Address</label>
+      <input id="login-email" name="email" type="email" required autocomplete="email"
+             placeholder="you@example.com" value="{{ email if tab == 'login' }}">
+      <label for="login-password">Password</label>
+      <input id="login-password" name="password" type="password" required autocomplete="current-password">
+      <button class="btn btn-primary btn-block" name="role" value="customer">Login as Customer</button>
+      <button class="btn btn-outline btn-block" name="role" value="staff">Login as Employee (Staff)</button>
+    </form>
+
+    <form id="panel-signup" role="tabpanel" aria-labelledby="tab-signup" method="post"
+          action="{{ url_for('signup') }}" {% if tab != 'signup' %}hidden{% endif %}>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label for="su-name">Full Name</label>
+      <input id="su-name" name="name" required autocomplete="name" value="{{ name or '' }}">
+      <label for="su-email">Email Address</label>
+      <input id="su-email" name="email" type="email" required autocomplete="email"
+             placeholder="you@example.com" value="{{ email if tab == 'signup' }}">
+      <label for="su-password">Password <span class="muted">(min. 8 characters)</span></label>
+      <input id="su-password" name="password" type="password" required minlength="8" autocomplete="new-password">
+      <button class="btn btn-primary btn-block">Create Customer Account</button>
+      <p class="muted small center">Employee accounts are created by an administrator.</p>
+    </form>
+  </div>
+
+  <p class="muted small center demo">
+    Demo logins — Customer: <code>customer@example.com</code> / <code>password123</code><br>
+    Staff: <code>staff@example.com</code> / <code>staff123</code>
+  </p>
+</div>
+<script>
+  document.querySelectorAll('[role=tab]').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('[role=tab]').forEach(function (t) {
+        var on = t === tab;
+        t.setAttribute('aria-selected', on);
+        document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      });
+    });
+  });
+</script>
+{% endblock %}

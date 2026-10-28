@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Error {{ code }} · Car Rental System{% endblock %}
+{% block content %}
+<section class="card pad empty">
+  <h1 class="h1">Error {{ code }}</h1>
+  <p class="muted">{{ message }}</p>
+  <a class="btn btn-primary" href="{{ url_for('index') }}">Go to home</a>
+</section>
+{% endblock %}

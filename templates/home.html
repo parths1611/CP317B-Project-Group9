@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Search Cars · Car Rental System{% endblock %}
+{% block content %}
+<section class="card">
+  <h1 class="section-label">Search available vehicles</h1>
+  <form method="get" action="{{ url_for('home') }}" class="search-grid">
+    <div>
+      <label for="pickup">Pickup Date</label>
+      <input id="pickup" type="date" name="pickup" value="{{ pickup }}" min="{{ today.isoformat() }}" required>
+    </div>
+    <div>
+      <label for="return">Return Date</label>
+      <input id="return" type="date" name="return" value="{{ ret }}" min="{{ today.isoformat() }}" required>
+    </div>
+    <div>
+      <label for="type">Vehicle Type</label>
+      <select id="type" name="type">
+        <option value="">— Any —</option>
+        {% for t in TYPES %}<option {% if t == vtype %}selected{% endif %}>{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="category">Category</label>
+      <select id="category" name="category">
+        <option value="">— Any —</option>
+        {% for c in CATEGORIES %}<option {% if c == category %}selected{% endif %}>{{ c }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="search-actions">
+      <button class="btn btn-primary">
+        <svg aria-hidden="true" viewBox="0 0 24 24" class="icon"><circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-4.5-4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Search Vehicles
+      </button>
+    </div>
+  </form>
+</section>
+
+<div class="results-head">
+  <h2 class="section-label" id="results-title">
+    Available vehicles
+    {% if days %}<span class="muted"> · {{ vehicles|length }} found for {{ days }} day{{ 's' if days != 1 }}</span>{% endif %}
+  </h2>
+  <nav class="chips" aria-label="Filter by type">
+    <span class="muted small">Filter:</span>
+    {% set base = {'pickup': pickup, 'return': ret, 'category': category} %}
+    <a href="{{ url_for('home', **base) }}" class="chip {{ 'on' if not vtype }}" {% if not vtype %}aria-current="true"{% endif %}>All</a>
+    {% for t in TYPES %}
+      <a href="{{ url_for('home', type=t, **base) }}" class="chip {{ 'on' if t == vtype }}" {% if t == vtype %}aria-current="true"{% endif %}>{{ t }}</a>
+    {% endfor %}
+  </nav>
+</div>
+
+{% if vehicles %}
+<ul class="car-grid" aria-labelledby="results-title">
+  {% for v in vehicles %}
+  <li class="card car-card">
+    <div class="car-photo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" class="icon"><path d="M5 17h14M6 17l1.5-5h9L18 17M5 17v2M19 17v2M8 12l1-3h6l1 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>[ {{ v.name }} ]</span>
+    </div>
+    <div class="car-body">
+      <div class="row-between">
+        <h3>{{ v.name }}</h3>
+        <span class="badge badge-dark">Available</span>
+      </div>
+      <p class="muted small">{{ v.type }} · {{ v.category }} · {{ v.seats }} seats</p>
+      <div class="row-between">
+        <p><strong>${{ v.price_per_day }}</strong> <span class="muted small">/ day</span></p>
+        <a class="btn btn-primary btn-sm"
+           href="{{ url_for('vehicle_details', vehicle_id=v.id, pickup=pickup, **{'return': ret}) }}"
+           aria-label="View details for {{ v.name }}">View Details</a>
+      </div>
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% elif days %}
+<div class="card empty">
+  <p><strong>No vehicles are available for those dates and filters.</strong></p>
+  <p class="muted">Try different dates, or set Type and Category to “Any”.</p>
+</div>
+{% endif %}
+{% endblock %}

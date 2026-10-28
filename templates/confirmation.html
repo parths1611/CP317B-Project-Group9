@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Reservation {{ r.id|res_id }} · Car Rental System{% endblock %}
+{% block content %}
+<section class="card pad confirm">
+  <div class="check" aria-hidden="true">✓</div>
+  <h1 class="h1">Reservation confirmed</h1>
+  <p class="muted">Your booking reference is <strong class="mono">{{ r.id|res_id }}</strong>.</p>
+
+  <dl class="summary confirm-summary">
+    <div><dt>Vehicle</dt><dd>{{ r.vehicle }} <span class="muted small">({{ r.type }} · {{ r.category }})</span></dd></div>
+    <div><dt>Pickup</dt><dd>{{ r.pickup_date|pretty_date }}</dd></div>
+    <div><dt>Return</dt><dd>{{ r.return_date|pretty_date }}</dd></div>
+    <div><dt>Duration</dt><dd>{{ days }} day{{ 's' if days != 1 }} × ${{ r.price_per_day }}</dd></div>
+    <div class="divider"><dt><strong>Total</strong></dt><dd><strong>${{ r.total_price }}</strong></dd></div>
+    <div><dt>Status</dt><dd><span class="badge badge-dark">Upcoming</span></dd></div>
+  </dl>
+
+  <p class="small muted">Bring a valid driver's licence and credit card to pickup. Free cancellation up to 24 hours before pickup.</p>
+  <a class="btn btn-primary" href="{{ url_for('home') }}">Search more cars</a>
+</section>
+{% endblock %}

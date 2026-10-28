@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · Car Rental System{% endblock %}
+{% block content %}
+<section class="card pad empty">
+  <h1 class="h1">{{ title }}</h1>
+  <p><span class="badge badge-outline">Planned · {{ sprint }}</span></p>
+  <p class="muted">This page is part of <strong>{{ story }}</strong> and will be built in {{ sprint }}.</p>
+</section>
+{% endblock %}

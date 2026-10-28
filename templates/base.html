@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Car Rental System{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+{% set ep = request.endpoint %}
+{% macro navlink(endpoint, label, active) -%}
+  <a href="{{ url_for(endpoint, **kwargs) }}" {% if active %}aria-current="page" class="active"{% endif %}>{{ label }}</a>
+{%- endmacro %}
+
+{% if g.user %}
+<header class="topbar">
+  <div class="brand">
+    <svg aria-hidden="true" viewBox="0 0 24 24" class="icon"><path d="M5 17h14M6 17l1.5-5h9L18 17M5 17v2M19 17v2M8 12l1-3h6l1 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="15" r=".9" fill="currentColor"/><circle cx="16" cy="15" r=".9" fill="currentColor"/></svg>
+    {{ 'CRS Staff Portal' if g.user.role == 'staff' else 'Car Rental System' }}
+  </div>
+  <nav aria-label="Main">
+    {% if g.user.role == 'staff' %}
+      {{ navlink('dashboard', 'Dashboard', ep == 'dashboard') }}
+      {{ navlink('planned', 'Vehicles', page == 'staff-vehicles', page='staff-vehicles') }}
+      {{ navlink('planned', 'Reservations', page == 'staff-reservations', page='staff-reservations') }}
+      {{ navlink('planned', 'Reports', page == 'staff-reports', page='staff-reports') }}
+    {% else %}
+      {{ navlink('home', 'Search Cars', ep in ('home', 'vehicle_details', 'confirmation')) }}
+      {{ navlink('planned', 'My Reservations', page == 'reservations', page='reservations') }}
+      {{ navlink('planned', 'Rental History', page == 'history', page='history') }}
+      {{ navlink('planned', 'Profile', page == 'profile', page='profile') }}
+    {% endif %}
+  </nav>
+  <div class="who">
+    <span>{{ 'Staff: ' if g.user.role == 'staff' }}{{ g.user.name }}</span>
+    <form method="post" action="{{ url_for('logout') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="linkish">Log out</button>
+    </form>
+  </div>
+</header>
+{% endif %}
+
+<main id="main" class="{% block main_class %}container{% endblock %}">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }}" role="{{ 'alert' if cat == 'error' else 'status' }}">
+        <strong>{{ 'Error:' if cat == 'error' else 'Done:' }}</strong> {{ msg }}
+      </div>
+    {% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

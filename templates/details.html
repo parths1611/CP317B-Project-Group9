@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}{{ v.name }} · Car Rental System{% endblock %}
+{% block content %}
+<a class="back" href="{{ back }}">‹ Back to Search</a>
+
+<div class="details-grid">
+  <section class="card">
+    <div class="car-photo car-photo-lg" aria-hidden="true">
+      <svg viewBox="0 0 24 24" class="icon"><path d="M5 17h14M6 17l1.5-5h9L18 17M5 17v2M19 17v2M8 12l1-3h6l1 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>[ {{ v.name }} — Vehicle Photo ]</span>
+    </div>
+    <div class="pad">
+      <div class="row-between">
+        <h1 class="h1">{{ v.name }}</h1>
+        {% if v.status != 'Available' %}
+          <span class="badge badge-outline">{{ v.status }}</span>
+        {% elif available %}
+          <span class="badge badge-dark">Available</span>
+        {% else %}
+          <span class="badge badge-grey">Booked for these dates</span>
+        {% endif %}
+      </div>
+      <p class="muted small">{{ v.type }} · {{ v.category }} · ID: {{ v.id }}</p>
+
+      <h2 class="section-label">Vehicle specifications</h2>
+      <dl class="specs">
+        <div><dt>Seats</dt><dd>{{ v.seats }}</dd></div>
+        <div><dt>Transmission</dt><dd>{{ v.transmission }}</dd></div>
+        <div><dt>Fuel Type</dt><dd>{{ v.fuel_type }}</dd></div>
+        <div><dt>Mileage</dt><dd>{{ "{:,}".format(v.mileage_km) }} km</dd></div>
+        <div><dt>Category</dt><dd>{{ v.category }}</dd></div>
+        <div><dt>Type</dt><dd>{{ v.type }}</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <aside>
+    <section class="card pad">
+      <h2 class="section-label">Rental pricing</h2>
+      <div class="price-box">
+        <span class="price">${{ v.price_per_day }}</span>
+        <span class="muted small">per day</span>
+      </div>
+
+      <h2 class="section-label">Rental dates</h2>
+      <form method="get" action="{{ url_for('vehicle_details', vehicle_id=v.id) }}" id="date-form">
+        <p class="small"><strong>When do you need it?</strong></p>
+        <label for="d-pickup">Pickup date</label>
+        <input id="d-pickup" type="date" name="pickup" value="{{ pickup_raw }}" min="{{ today.isoformat() }}" required>
+        <label for="d-return">Return date</label>
+        <input id="d-return" type="date" name="return" value="{{ return_raw }}" min="{{ today.isoformat() }}" required>
+        <button class="btn btn-outline btn-block">Check availability</button>
+      </form>
+
+      {% if date_error %}
+        <p class="field-error" role="alert">{{ date_error }}</p>
+      {% else %}
+      <dl class="summary dates-summary">
+        <div><dt>Pickup</dt><dd>{{ pickup|pretty_date }}</dd></div>
+        <div><dt>Return</dt><dd>{{ ret|pretty_date }}</dd></div>
+        <div class="divider"><dt>Duration</dt><dd>{{ days }} day{{ 's' if days != 1 }}</dd></div>
+        <div><dt><strong>Est. Total</strong></dt><dd><strong>${{ v.price_per_day * days }}</strong></dd></div>
+      </dl>
+        {% if available %}
+        <form method="post" action="{{ url_for('reserve', vehicle_id=v.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="pickup" value="{{ pickup.isoformat() }}">
+          <input type="hidden" name="return" value="{{ ret.isoformat() }}">
+          <button class="btn btn-primary btn-block" id="reserve-btn">Reserve This Vehicle</button>
+          <p class="muted small" id="dates-changed" hidden>You changed the dates. Click “Check availability” before reserving.</p>
+        </form>
+        {% else %}
+        <button class="btn btn-block" disabled>Not available for these dates</button>
+        {% endif %}
+      {% endif %}
+    </section>
+
+    <section class="card pad note">
+      <h2 class="section-label">Policy note</h2>
+      <p class="small">Cancellations must be made 24 hours before pickup. A valid driver's licence and credit card are required at collection.</p>
+    </section>
+  </aside>
+</div>
+<script>
+  // Don't let the customer reserve dates they haven't checked yet.
+  document.querySelectorAll('#date-form input').forEach(function (input) {
+    input.addEventListener('input', function () {
+      var btn = document.getElementById('reserve-btn');
+      if (btn) {
+        btn.disabled = true;
+        document.getElementById('dates-changed').hidden = false;
+      }
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · CRS Staff Portal{% endblock %}
+{% block content %}
+<div class="row-between page-head">
+  <h1 class="h1">Daily Rental Report</h1>
+  <form method="get" action="{{ url_for('dashboard') }}" class="date-nav">
+    <a class="btn btn-outline btn-sm" href="{{ url_for('dashboard', date=prev_day.isoformat()) }}" aria-label="Previous day">‹</a>
+    <label for="date" class="sr-only">Report date</label>
+    <input id="date" type="date" name="date" value="{{ day.isoformat() }}" onchange="this.form.submit()">
+    <a class="btn btn-outline btn-sm" href="{{ url_for('dashboard', date=next_day.isoformat()) }}" aria-label="Next day">›</a>
+    {% if day != today %}<a class="btn btn-sm" href="{{ url_for('dashboard') }}">Today</a>{% endif %}
+    <noscript><button class="btn btn-primary btn-sm">Go</button></noscript>
+  </form>
+</div>
+<p class="muted small">{{ day|long_date }}{{ ' (today)' if day == today }}</p>
+
+<div class="stats">
+  <div class="card stat"><span class="section-label">Rentals this day</span><strong>{{ rows|length }}</strong><span class="muted small">{{ stats.pickups }} pickup{{ 's' if stats.pickups != 1 }}</span></div>
+  <div class="card stat"><span class="section-label">Available vehicles</span><strong>{{ stats.available }}</strong><span class="muted small">Ready for pickup</span></div>
+  <div class="card stat"><span class="section-label">On rent</span><strong>{{ stats.rented }}</strong><span class="muted small">Out overnight</span></div>
+  <div class="card stat"><span class="section-label">Total fleet</span><strong>{{ stats.total }}</strong><span class="muted small">All vehicles</span></div>
+</div>
+
+<div class="dash-grid">
+  <section class="card pad">
+    <h2 class="section-label">Rentals on {{ day|pretty_date }}</h2>
+    {% if rows %}
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">ID</th><th scope="col">Customer</th><th scope="col">Vehicle</th>
+        <th scope="col">Pickup</th><th scope="col">Return</th><th scope="col">Today</th><th scope="col" class="num">Total</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td class="mono muted">{{ r.id|res_id }}</td>
+          <td>{{ r.customer }}</td>
+          <td><strong>{{ r.vehicle }}</strong></td>
+          <td class="mono">{{ r.pickup_date }}</td>
+          <td class="mono">{{ r.return_date }}</td>
+          <td><span class="badge {{ 'badge-dark' if r.day_status == 'Pickup' else 'badge-outline' if r.day_status == 'Return' else 'badge-grey' }}">{{ r.day_status }}</span></td>
+          <td class="num">${{ r.total_price }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+      <p class="muted">No rentals on this day.</p>
+    {% endif %}
+  </section>
+
+  <aside class="card pad">
+    <h2 class="section-label">Fleet status</h2>
+    {% for label, n in [('Available', stats.available), ('On rent', stats.rented), ('Maintenance', stats.maintenance)] %}
+    <div class="meter">
+      <div class="row-between small"><span>{{ label }}</span><span>{{ n }} / {{ stats.total }}</span></div>
+      <div class="bar" role="img" aria-label="{{ label }}: {{ n }} of {{ stats.total }}"><span style="width: {{ (100 * n / stats.total) | round(1) if stats.total else 0 }}%"></span></div>
+    </div>
+    {% endfor %}
+  </aside>
+</div>
+
+<section class="card pad">
+  <h2 class="section-label">Recent bookings</h2>
+  {% if recent %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th scope="col">ID</th><th scope="col">Customer</th><th scope="col">Vehicle</th>
+      <th scope="col">Rental days</th><th scope="col">Booked</th><th scope="col" class="num">Total</th></tr></thead>
+    <tbody>
+    {% for r in recent %}
+      <tr>
+        <td class="mono muted">{{ r.id|res_id }}</td>
+        <td>{{ r.customer }}</td>
+        <td><strong>{{ r.vehicle }}</strong></td>
+        <td class="mono">
+          <a href="{{ url_for('dashboard', date=r.pickup_date) }}" aria-label="Open the report for {{ r.pickup_date|pretty_date }}">{{ r.pickup_date }}</a>
+          → {{ r.return_date }}
+          <span class="muted">({{ r.days }} day{{ 's' if r.days != 1 }})</span>
+        </td>
+        <td class="mono muted">{{ r.booked_at[:16] }}</td>
+        <td class="num">${{ r.total_price }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+    <p class="muted">No bookings yet.</p>
+  {% endif %}
+</section>
+{% endblock %}
