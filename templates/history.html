@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Rental History · Car Rental System{% endblock %}
+{% block content %}
+<div class="row-between page-head">
+  <h1 class="h1">Rental History</h1>
+  <nav class="chips" aria-label="Filter by status">
+    <span class="muted small">Filter by status:</span>
+    <a href="{{ url_for('rental_history') }}" class="chip {{ 'on' if not status }}" {% if not status %}aria-current="true"{% endif %}>All</a>
+    {% for s in ['Active', 'Completed', 'Cancelled'] %}
+      <a href="{{ url_for('rental_history', status=s) }}" class="chip {{ 'on' if s == status }}" {% if s == status %}aria-current="true"{% endif %}>{{ s }}</a>
+    {% endfor %}
+  </nav>
+</div>
+
+<section class="card pad">
+  {% if rows %}
+  <div class="table-wrap">
+  <table>
+    <caption class="sr-only">Your rentals{{ ', ' ~ status if status }}</caption>
+    <thead><tr><th scope="col">Reservation ID</th><th scope="col">Vehicle</th><th scope="col">Pickup date</th>
+      <th scope="col">Return date</th><th scope="col">Duration</th><th scope="col" class="num">Total</th><th scope="col">Status</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td class="mono muted">{{ r.id|res_id }}</td>
+        <td><strong>{{ r.vehicle }}</strong><br><span class="muted small">{{ r.type }} · {{ r.category }}</span></td>
+        <td class="mono">{{ r.pickup_date }}</td>
+        <td class="mono">{{ r.return_date }}</td>
+        <td>{{ r.days }} day{{ 's' if r.days != 1 }}</td>
+        <td class="num">
+          {% if r.rental_status == 'Cancelled' %}<span aria-label="No charge">—</span>{% else %}${{ r.total_price }}{% endif %}
+        </td>
+        <td><span class="badge {{ 'badge-dark' if r.rental_status == 'Active' else 'badge-grey' if r.rental_status == 'Cancelled' else 'badge-outline' }}">{{ r.rental_status }}</span></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <div class="row-between table-foot small muted">
+    <span>Showing {{ rows|length }} of {{ matched }} record{{ 's' if matched != 1 }}</span>
+    <span class="pager">
+      {% if page > 1 %}<a href="{{ url_for('rental_history', status=status, page=page - 1) }}">‹ Previous</a>{% endif %}
+      Page {{ page }} of {{ pages }}
+      {% if page < pages %}<a href="{{ url_for('rental_history', status=status, page=page + 1) }}">Next ›</a>{% endif %}
+    </span>
+  </div>
+  {% elif total_records %}
+    <p class="muted">No {{ status|lower }} rentals. <a href="{{ url_for('rental_history') }}">Show all</a></p>
+  {% else %}
+  <div class="empty">
+    <p><strong>You haven't rented a car yet.</strong></p>
+    <a class="btn btn-primary" href="{{ url_for('home') }}">Search cars</a>
+  </div>
+  {% endif %}
+</section>
+<p class="muted small">Upcoming bookings will appear under My Reservations.</p>
+{% endblock %}

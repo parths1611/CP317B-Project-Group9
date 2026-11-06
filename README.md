@@ -56,13 +56,14 @@ All demo accounts are created automatically. On the login page, use the button t
 3. **Choose your days:** in the "When do you need it?" box, change the pickup or return date and click **Check availability**. The total and availability update. If you change a date without checking, the Reserve button is disabled until you do.
 4. **Reserve:** click **Reserve This Vehicle**. A confirmation page shows a reference number (e.g. `R-1007`), the dates, and the total.
 5. **No double bookings:** open the same car for overlapping dates. It shows "Booked for these dates" and can't be reserved. Booking from the day the last rental ends is allowed.
+6. **Rental History:** click **Rental History** in the top bar. Jane has two completed rentals, one cancelled rental (no charge shown) and today's Toyota Camry as Active. Use the status filter buttons to narrow the list. Upcoming bookings aren't listed here; they'll go under My Reservations (UI-05).
 
 **As staff** (log out, then log in as `staff@example.com` with **Login as Employee (Staff)**):
 
 1. **Daily Rental Report:** the dashboard shows every rental on today's date (pickups, returns, and cars out on rent) plus fleet counts. Use the ‹ › arrows or the date picker to view another day.
 2. **Recent bookings:** the reservation you just made is at the top of this table, with the customer, car, rental days, and total. Click its pickup date to jump to that day's report.
 
-**Access rules:** customers can't open staff pages and staff can't open customer pages (you get a 403 page). A customer can't view another customer's reservation. My Reservations, Rental History, Profile, Vehicles and Reports are placeholders for Sprint 2 and 3.
+**Access rules:** customers can't open staff pages and staff can't open customer pages (you get a 403 page). A customer can't view another customer's reservation. My Reservations, Profile, Vehicles and Reports are still placeholders for later stories.
 
 ## Run the tests
 
@@ -72,7 +73,7 @@ With the virtual environment active:
 python -m pytest -v
 ```
 
-There are 37 tests, and each one is tagged with the story it checks.
+There are 53 tests, and each one is tagged with the story it checks.
 
 ## Sprint 1 stories → code
 
@@ -82,9 +83,10 @@ There are 37 tests, and each one is tagged with the story it checks.
 | UI-01 Search Available Cars | Search by dates, type and category. Cars in maintenance or already booked for those dates are hidden | `db.py` → `search_available`; `templates/home.html` |
 | UI-02 View Car Details | Specs, daily price, a "When do you need it?" date picker, trip total for the chosen days, live availability badge | `app.py` → `vehicle_details`; `templates/details.html` |
 | UI-03 Reserve a Car | Books the car and shows a confirmation with a reference number. Overlapping bookings are blocked | `db.py` → `is_vehicle_available`, `create_reservation` |
+| UI-04 View Rental History *(Sprint 2)* | Customers see their current and past rentals (vehicle, dates, duration, total, status), filter by Active / Completed / Cancelled, 10 per page. Only their own rentals are shown | `db.py` → `rental_history`, `rental_status`; `app.py` → `rental_history`; `templates/history.html` |
 | REP-01 Daily Rental Report | Staff pick any date to see every rental that day plus fleet stats. A Recent bookings panel shows new reservations (with their rental days) as soon as they're made | `db.py` → `daily_rentals`, `fleet_stats`; `templates/dashboard.html` |
 
-The nav links for later stories (My Reservations, Rental History, Profile, Vehicles, Reports) go to "Planned for Sprint 2/3" pages.
+The nav links for later stories (My Reservations, Profile, Vehicles, Reports) go to "Planned for Sprint 2/3" pages.
 
 ## Design notes worth mentioning in the report
 

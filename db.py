@@ -109,21 +109,24 @@ def seed_db(db):
     t = date.today()
     d = lambda n: (t + timedelta(days=n)).isoformat()  # noqa: E731
     seed_res = [
-        # user_id, vehicle, pickup, return
-        (4, "V003", d(-6), d(-3)),   # completed
-        (3, "V002", d(-2), d(1)),    # active today
-        (2, "V004", d(-1), d(2)),    # active today
-        (1, "V001", d(0), d(3)),     # picks up today
-        (3, "V005", d(2), d(5)),     # upcoming
-        (1, "V002", d(5), d(9)),     # upcoming
+        # user_id, vehicle, pickup, return, status
+        (1, "V004", d(-40), d(-37), "Confirmed"),   # Jane's past rentals (UI-04 history)
+        (1, "V005", d(-25), d(-22), "Confirmed"),
+        (1, "V007", d(-15), d(-12), "Cancelled"),
+        (4, "V003", d(-6), d(-3), "Confirmed"),     # completed
+        (3, "V002", d(-2), d(1), "Confirmed"),      # active today
+        (2, "V004", d(-1), d(2), "Confirmed"),      # active today
+        (1, "V001", d(0), d(3), "Confirmed"),       # picks up today
+        (3, "V005", d(2), d(5), "Confirmed"),       # upcoming
+        (1, "V002", d(5), d(9), "Confirmed"),       # upcoming
     ]
-    for uid, vid, p, r in seed_res:
+    for uid, vid, p, r, status in seed_res:
         price = db.execute("SELECT price_per_day FROM vehicles WHERE id = ?", (vid,)).fetchone()[0]
         days = (date.fromisoformat(r) - date.fromisoformat(p)).days
         db.execute(
-            "INSERT INTO reservations (user_id, vehicle_id, pickup_date, return_date, total_price)"
-            " VALUES (?, ?, ?, ?, ?)",
-            (uid, vid, p, r, price * days),
+            "INSERT INTO reservations (user_id, vehicle_id, pickup_date, return_date, total_price, status)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            (uid, vid, p, r, price * days, status),
         )
 
 
@@ -195,6 +198,41 @@ def create_reservation(db, user_id, vehicle_id, pickup, ret):
     except Exception:
         db.rollback()
         raise
+
+
+# ---------------------------------------------------------------------------
+# Rental history (UI-04)
+# ---------------------------------------------------------------------------
+HISTORY_STATUSES = ["Active", "Completed", "Cancelled"]
+
+
+def rental_status(rental, today):
+    """Where a reservation stands on `today`: Cancelled, Completed, Active or Upcoming."""
+    if rental["status"] == "Cancelled":
+        return "Cancelled"
+    if rental["return_date"] < today:
+        return "Completed"
+    if rental["pickup_date"] <= today:
+        return "Active"
+    return "Upcoming"
+
+
+def rental_history(db, user_id, today):
+    """A customer's current and past rentals, newest first. Upcoming bookings
+    belong to My Reservations (UI-05), so they're left out unless cancelled."""
+    rows = db.execute(
+        """
+        SELECT r.*, v.name AS vehicle, v.type, v.category,
+               CAST(julianday(r.return_date) - julianday(r.pickup_date) AS INTEGER) AS days
+        FROM reservations r
+        JOIN vehicles v ON v.id = r.vehicle_id
+        WHERE r.user_id = :uid
+          AND (r.status = 'Cancelled' OR r.pickup_date <= :today)
+        ORDER BY r.pickup_date DESC, r.id DESC
+        """,
+        {"uid": user_id, "today": today},
+    ).fetchall()
+    return [dict(r, rental_status=rental_status(r, today)) for r in rows]
 
 
 # ---------------------------------------------------------------------------

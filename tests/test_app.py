@@ -218,10 +218,12 @@ def test_cannot_reserve_maintenance_vehicle(client):
     assert "/reservations/" not in r.headers["Location"]
 
 
-def test_customer_cannot_view_someone_elses_reservation(client):
+def test_customer_cannot_view_someone_elses_reservation(client, app):
+    with app.app_context():
+        saras = store.get_db().execute(
+            "SELECT id FROM reservations WHERE user_id = 3 LIMIT 1").fetchone()[0]
     login(client)  # Jane (user 1)
-    # Reservation 1002 in seed data belongs to Sara Lee (user 3)
-    assert client.get("/reservations/1002").status_code == 404
+    assert client.get(f"/reservations/{saras}").status_code == 404
 
 
 @pytest.mark.parametrize("pickup,ret,expected", [
@@ -237,6 +239,100 @@ def test_availability_overlap_rules(app, pickup, ret, expected):
     # Seed: V002 booked from day 5 to day 9
     with app.app_context():
         assert store.is_vehicle_available(store.get_db(), "V002", D(pickup), D(ret)) is expected
+
+
+# ----------------------------------------------------------------- UI-04 rental history
+def history_rows(html):
+    """Just the table body of the history page."""
+    return html.split("<tbody>")[1].split("</tbody>")[0] if "<tbody>" in html else ""
+
+
+def test_history_shows_past_and_current_rentals(client):
+    login(client)  # Jane
+    html = client.get("/history").get_data(as_text=True)
+    rows = history_rows(html)
+    # Seed: BMW (completed), RAV4 (completed), Elantra (cancelled), Camry (active today)
+    for text in ["BMW 3 Series", "Toyota RAV4", "Hyundai Elantra", "Toyota Camry",
+                 D(-40), D(-37), "$360", "3 days"]:
+        assert text in rows
+    assert rows.count("Completed") == 2 and rows.count("Cancelled") == 1 and rows.count("Active") == 1
+    assert "Showing 4 of 4 records" in html
+
+
+def test_history_hides_upcoming_bookings(client):
+    login(client)
+    rows = history_rows(client.get("/history").get_data(as_text=True))
+    assert "Honda CR-V" not in rows  # Jane's CR-V booking starts in 5 days
+
+
+def test_history_cancelled_has_no_charge(client):
+    login(client)
+    rows = history_rows(client.get("/history?status=Cancelled").get_data(as_text=True))
+    assert "Hyundai Elantra" in rows and "No charge" in rows and "$" not in rows
+
+
+@pytest.mark.parametrize("status,shown,hidden", [
+    ("Completed", ["BMW 3 Series", "Toyota RAV4"], ["Hyundai Elantra", "Toyota Camry"]),
+    ("Cancelled", ["Hyundai Elantra"], ["BMW 3 Series", "Toyota Camry"]),
+    ("Active", ["Toyota Camry"], ["BMW 3 Series", "Hyundai Elantra"]),
+])
+def test_history_status_filter(client, status, shown, hidden):
+    login(client)
+    rows = history_rows(client.get(f"/history?status={status}").get_data(as_text=True))
+    assert all(v in rows for v in shown) and not any(v in rows for v in hidden)
+
+
+def test_history_only_shows_own_rentals(client):
+    login(client, "chris@example.com")
+    rows = history_rows(client.get("/history").get_data(as_text=True))
+    assert "Ford Explorer" in rows  # Chris's own rental
+    assert "BMW 3 Series" not in rows and "Toyota Camry" not in rows  # Jane's
+
+
+def test_history_empty_for_new_customer(client):
+    client.post("/signup", data={"name": "New Person", "email": "new@example.com",
+                                 "password": "longenough", "csrf_token": csrf(client)})
+    assert b"You haven't rented a car yet" in client.get("/history").data
+
+
+def test_new_booking_shows_in_history(client):
+    login(client)
+    reserve(client, "V010", D(0), D(2))  # picks up today, so it's a current rental
+    rows = history_rows(client.get("/history?status=Active").get_data(as_text=True))
+    assert "Ford F-150" in rows and "$190" in rows
+
+
+def test_history_pagination(client, app):
+    with app.app_context():
+        db = store.get_db()
+        for n in range(12):  # 12 extra completed rentals for Jane -> 16 total
+            db.execute("INSERT INTO reservations (user_id, vehicle_id, pickup_date, return_date, total_price)"
+                       " VALUES (1, 'V009', ?, ?, 96)", (D(-200 + 5 * n), D(-198 + 5 * n)))
+        db.commit()
+    login(client)
+    html = client.get("/history").get_data(as_text=True)
+    assert "Showing 10 of 16 records" in html and "Page 1 of 2" in html
+    html = client.get("/history?page=2").get_data(as_text=True)
+    assert "Showing 6 of 16 records" in html and "Page 2 of 2" in html
+    assert "Page 2 of 2" in client.get("/history?page=99").get_data(as_text=True)
+
+
+def test_history_requires_customer(client):
+    assert client.get("/history").status_code == 302  # not logged in
+    login(client, "staff@example.com", "staff123", "staff")
+    assert client.get("/history").status_code == 403
+
+
+@pytest.mark.parametrize("pickup,ret,status,expected", [
+    (-6, -3, "Confirmed", "Completed"),
+    (-1, 0, "Confirmed", "Active"),      # return day counts as current
+    (0, 3, "Confirmed", "Active"),       # pickup day
+    (2, 5, "Confirmed", "Upcoming"),
+    (-6, -3, "Cancelled", "Cancelled"),
+])
+def test_rental_status_rules(pickup, ret, status, expected):
+    r = {"pickup_date": D(pickup), "return_date": D(ret), "status": status}
+    assert store.rental_status(r, D(0)) == expected
 
 
 # ----------------------------------------------------------------- REP-01 daily report
@@ -276,7 +372,7 @@ def test_new_booking_appears_on_staff_dashboard(app, client):
 def test_recent_bookings_newest_first(app):
     with app.app_context():
         ids = [r["id"] for r in store.recent_reservations(store.get_db())]
-    assert ids == sorted(ids, reverse=True) and len(ids) == 6
+    assert ids == sorted(ids, reverse=True) and len(ids) == 8  # capped at 8
 
 
 def test_dashboard_other_date(client):

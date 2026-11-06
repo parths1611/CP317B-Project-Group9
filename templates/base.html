@@ -28,7 +28,7 @@
     {% else %}
       {{ navlink('home', 'Search Cars', ep in ('home', 'vehicle_details', 'confirmation')) }}
       {{ navlink('planned', 'My Reservations', page == 'reservations', page='reservations') }}
-      {{ navlink('planned', 'Rental History', page == 'history', page='history') }}
+      {{ navlink('rental_history', 'Rental History', ep == 'rental_history') }}
       {{ navlink('planned', 'Profile', page == 'profile', page='profile') }}
     {% endif %}
   </nav>

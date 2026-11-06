@@ -1,14 +1,16 @@
-"""Car Rental System — Sprint 1 prototype (CP317B, Group 9).
+"""Car Rental System — prototype (CP317B, Group 9).
 
-Stories in this sprint:
+Stories built so far:
   AUTH    Login / sign-up with customer and staff roles
   UI-01   Search Available Cars
   UI-02   View Car Details
   UI-03   Reserve a Car (with availability check, FR-10)
+  UI-04   View Rental History (Sprint 2)
   REP-01  Daily Rental Report (staff dashboard)
 
 Run:  python app.py   then open http://127.0.0.1:5000
 """
+import math
 import os
 import secrets
 import sqlite3
@@ -268,6 +270,26 @@ def register_routes(app):
         days = (date.fromisoformat(r["return_date"]) - date.fromisoformat(r["pickup_date"])).days
         return render_template("confirmation.html", r=r, days=days)
 
+    # ----------------------------------------- UI-04 rental history (customer)
+    HISTORY_PER_PAGE = 10
+
+    @app.route("/history")
+    @login_required("customer")
+    def rental_history():
+        status = request.args.get("status")
+        if status not in store.HISTORY_STATUSES:
+            status = None
+        rows = store.rental_history(store.get_db(), g.user["id"], date.today().isoformat())
+        total_records = len(rows)
+        if status:
+            rows = [r for r in rows if r["rental_status"] == status]
+        pages = max(1, math.ceil(len(rows) / HISTORY_PER_PAGE))
+        page = min(max(request.args.get("page", 1, type=int), 1), pages)
+        start = (page - 1) * HISTORY_PER_PAGE
+        return render_template(
+            "history.html", rows=rows[start:start + HISTORY_PER_PAGE], matched=len(rows),
+            total_records=total_records, status=status, page=page, pages=pages)
+
     # ------------------------------------------------ REP-01 dashboard (staff)
     @app.route("/staff/dashboard")
     @login_required("staff")
@@ -284,7 +306,6 @@ def register_routes(app):
     # --------------------------------------------- later sprints (placeholders)
     PLANNED = {
         "reservations": ("My Reservations", "UI-05 Manage Reservation", "Sprint 2", "customer"),
-        "history": ("Rental History", "UI-04 View Rental History", "Sprint 2", "customer"),
         "profile": ("Profile", "Account management", "Sprint 2", "customer"),
         "staff-vehicles": ("Manage Vehicles", "Manage Vehicle Information (FR-6)", "Sprint 2", "staff"),
         "staff-reservations": ("Reservations", "Monitor Reservations", "Sprint 2", "staff"),

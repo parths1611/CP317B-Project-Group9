@@ -149,6 +149,8 @@ th { font-family: var(--mono); font-size: .7rem; text-transform: uppercase; lett
 th.num { text-align: right; }
 td { padding: 11px 8px; border-bottom: 1px solid var(--line); }
 tr:last-child td { border-bottom: 0; }
+.table-foot { margin-top: 12px; flex-wrap: wrap; }
+.pager { display: flex; gap: 12px; }
 .meter { margin-bottom: 14px; }
 .bar { height: 6px; background: var(--soft); border-radius: 3px; margin-top: 5px; overflow: hidden; }
 .bar span { display: block; height: 100%; background: var(--ink-2); }
