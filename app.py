@@ -259,16 +259,38 @@ def register_routes(app):
     @app.route("/reservations/<int:reservation_id>")
     @login_required("customer")
     def confirmation(reservation_id):
-        r = store.get_db().execute(
-            """SELECT r.*, v.name AS vehicle, v.type, v.category, v.price_per_day
-               FROM reservations r JOIN vehicles v ON v.id = r.vehicle_id
-               WHERE r.id = ? AND r.user_id = ?""",
-            (reservation_id, g.user["id"]),
-        ).fetchone()
+        r = store.get_reservation(store.get_db(), reservation_id, g.user["id"])
         if r is None:  # missing, or someone else's booking (privacy)
             abort(404)
-        days = (date.fromisoformat(r["return_date"]) - date.fromisoformat(r["pickup_date"])).days
-        return render_template("confirmation.html", r=r, days=days)
+        return render_template("confirmation.html", r=r)
+
+    # ------------------------------------- UI-05 manage reservations (customer)
+    @app.route("/reservations")
+    @login_required("customer")
+    def my_reservations():
+        current, past = store.my_reservations(store.get_db(), g.user["id"])
+        return render_template("reservations.html", current=current, past=past)
+
+    @app.route("/reservations/<int:reservation_id>/cancel", methods=["GET", "POST"])
+    @login_required("customer")
+    def cancel_reservation(reservation_id):
+        db = store.get_db()
+        r = store.get_reservation(db, reservation_id, g.user["id"])
+        if r is None:
+            abort(404)
+        if request.method == "GET":
+            # Ask before cancelling: the browser's confirm() pop-up isn't reliable everywhere.
+            if not r["can_cancel"]:
+                flash(store.cancel_block_reason(r), "error")
+                return redirect(url_for("my_reservations"))
+            return render_template("cancel.html", r=r)
+        try:
+            store.cancel_reservation(db, reservation_id, g.user["id"])
+        except store.CannotCancel as e:
+            flash(str(e), "error")
+            return redirect(url_for("my_reservations"))
+        flash(f"Reservation R-{reservation_id} has been cancelled.", "success")
+        return redirect(url_for("my_reservations"))
 
     # ----------------------------------------- UI-04 rental history (customer)
     HISTORY_PER_PAGE = 10
@@ -305,7 +327,6 @@ def register_routes(app):
 
     # --------------------------------------------- later sprints (placeholders)
     PLANNED = {
-        "reservations": ("My Reservations", "UI-05 Manage Reservation", "Sprint 2", "customer"),
         "profile": ("Profile", "Account management", "Sprint 2", "customer"),
         "staff-vehicles": ("Manage Vehicles", "Manage Vehicle Information (FR-6)", "Sprint 2", "staff"),
         "staff-reservations": ("Reservations", "Monitor Reservations", "Sprint 2", "staff"),
