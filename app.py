@@ -328,9 +328,7 @@ def register_routes(app):
     # --------------------------------------------- later sprints (placeholders)
     PLANNED = {
         "profile": ("Profile", "Account management", "Sprint 2", "customer"),
-        "staff-vehicles": ("Manage Vehicles", "Manage Vehicle Information (FR-6)", "Sprint 2", "staff"),
         "staff-reservations": ("Reservations", "Monitor Reservations", "Sprint 2", "staff"),
-        "staff-reports": ("Reports", "REP-02 / REP-03 Reports", "Sprint 2–3", "staff"),
     }
 
     @app.route("/planned/<page>")
@@ -381,6 +379,67 @@ def register_routes(app):
             abort(404)
         flash(f"{vehicle_id} marked as serviced. Its service counter is back to 0 km.", "success")
         return redirect(url_for("reports", days=report_days()))
+
+    # ------------------------------------------ VEH-01 manage vehicles (staff)
+    @app.route("/staff/vehicles")
+    @login_required("staff")
+    def manage_vehicles():
+        f = {k: (request.args.get(k) or "").strip() for k in ("q", "type", "category", "status")}
+        db = store.get_db()
+        vehicles = store.list_vehicles(db, f["q"], f["type"], f["category"], f["status"])
+        return render_template("vehicles.html", vehicles=vehicles, f=f,
+                               total=len(store.list_vehicles(db)), STATUSES=store.VEHICLE_STATUSES)
+
+    @app.route("/staff/vehicles/new", methods=["GET", "POST"])
+    @login_required("staff")
+    def add_vehicle():
+        data, errors = {"status": "Available"}, {}
+        if request.method == "POST":
+            data, errors = store.validate_vehicle(request.form, new=True)
+            if not errors:
+                vehicle_id = store.add_vehicle(store.get_db(), data)
+                flash(f"{data['name']} added as {vehicle_id}. "
+                      + ("Customers can now find it in search." if data["status"] == "Available"
+                         else "It's hidden from customers until it's set to Available."), "success")
+                return redirect(url_for("manage_vehicles"))
+        return render_template("vehicle_form.html", v=data, errors=errors, new=True), 400 if errors else 200
+
+    @app.route("/staff/vehicles/<vehicle_id>/edit", methods=["GET", "POST"])
+    @login_required("staff")
+    def edit_vehicle(vehicle_id):
+        db = store.get_db()
+        current = store.get_vehicle(db, vehicle_id)
+        if current is None:
+            abort(404)
+        data, errors = dict(current), {}
+        if request.method == "POST":
+            data, errors = store.validate_vehicle(request.form, new=False)
+            if not errors:
+                store.update_vehicle(db, vehicle_id, data)
+                flash(f"{vehicle_id} {data['name']} updated.", "success")
+                return redirect(url_for("manage_vehicles"))
+            data = dict(current, **data)  # keep the ID and mileage on screen
+        return render_template("vehicle_form.html", v=data, errors=errors, new=False), 400 if errors else 200
+
+    @app.route("/staff/vehicles/<vehicle_id>/status", methods=["POST"])
+    @login_required("staff")
+    def vehicle_status(vehicle_id):
+        db = store.get_db()
+        status = request.form.get("status")
+        if status not in store.VEHICLE_STATUSES:
+            abort(400, "Unknown vehicle status.")
+        if not store.set_vehicle_status(db, vehicle_id, status):
+            abort(404)
+        if status == "Available":
+            flash(f"{vehicle_id} is now Available and shows in customer search.", "success")
+        else:
+            flash(f"{vehicle_id} is now in Maintenance and hidden from customer search.", "success")
+            upcoming = store.upcoming_bookings(db, vehicle_id, date.today().isoformat())
+            if upcoming:
+                flash(f"{vehicle_id} still has {upcoming} upcoming booking{'s' if upcoming != 1 else ''}. "
+                      "Contact those customers if it won't be ready in time.", "warning")
+        return redirect(url_for("manage_vehicles"))
+
       
     
     @app.errorhandler(403)
