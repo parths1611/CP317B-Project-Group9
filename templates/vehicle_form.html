@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Add Vehicle' if new else 'Edit ' ~ v.id }} · CRS Staff Portal{% endblock %}
+
+{% macro field_error(name) -%}
+  {% if errors[name] %}<p class="field-error" id="{{ name }}-error">{{ errors[name] }}</p>{% endif %}
+{%- endmacro %}
+
+{% macro select(name, label, choices) -%}
+<div>
+  <label for="{{ name }}">{{ label }}</label>
+  <select id="{{ name }}" name="{{ name }}" required {% if errors[name] %}aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}>
+    <option value="">— Select —</option>
+    {% for c in choices %}<option {% if c == v[name] %}selected{% endif %}>{{ c }}</option>{% endfor %}
+  </select>
+  {{ field_error(name) }}
+</div>
+{%- endmacro %}
+
+{% macro number(name, label, min, max, placeholder) -%}
+<div>
+  <label for="{{ name }}">{{ label }}</label>
+  <input id="{{ name }}" name="{{ name }}" type="number" min="{{ min }}" max="{{ max }}" step="1" required
+         value="{{ v[name] if v[name] is not none else '' }}" placeholder="{{ placeholder }}"
+         {% if errors[name] %}aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}>
+  {{ field_error(name) }}
+</div>
+{%- endmacro %}
+
+{% block content %}
+<a class="back" href="{{ url_for('manage_vehicles') }}">‹ Back to vehicles</a>
+
+<section class="card pad">
+  <h1 class="h1">{{ 'Add a new vehicle' if new else 'Edit ' ~ v.id ~ ' · ' ~ v.name }}</h1>
+  {% if errors %}<p class="field-error" role="alert">Please fix the {{ errors|length }} field{{ 's' if errors|length != 1 }} marked below.</p>{% endif %}
+
+  <form method="post" class="vehicle-form" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div>
+      <label for="name">Vehicle name</label>
+      <input id="name" name="name" required maxlength="60" value="{{ v.name or '' }}" placeholder="e.g. Toyota Corolla"
+             {% if errors.name %}aria-invalid="true" aria-describedby="name-error"{% endif %}>
+      {{ field_error('name') }}
+    </div>
+    {{ select('type', 'Vehicle type', TYPES) }}
+    {{ select('category', 'Category', CATEGORIES) }}
+    {{ number('price_per_day', 'Price per day ($)', 1, 2000, 'e.g. 55') }}
+    {{ number('seats', 'Seats', 1, 15, 'e.g. 5') }}
+    {{ select('transmission', 'Transmission', ['Automatic', 'Manual']) }}
+    {{ select('fuel_type', 'Fuel type', ['Petrol', 'Diesel', 'Hybrid', 'Electric']) }}
+    {% if new %}
+      {{ number('mileage_km', 'Mileage (km)', 0, 1000000, 'e.g. 12000') }}
+    {% else %}
+    <div>
+      <span class="label">Mileage (km)</span>
+      <p class="readonly mono">{{ "{:,}".format(v.mileage_km) }}</p>
+      <p class="small muted">Goes up when returns are logged on the Reports page.</p>
+    </div>
+    {% endif %}
+    {{ select('status', 'Availability', ['Available', 'Maintenance']) }}
+
+    <div class="form-actions">
+      <button class="btn btn-primary">{{ 'Save Vehicle' if new else 'Save Changes' }}</button>
+      <a class="btn btn-outline" href="{{ url_for('manage_vehicles') }}">Cancel</a>
+    </div>
+  </form>
+  {% if not new %}
+    <p class="small muted">Changing the price affects new bookings only. Existing bookings keep the price they were made at.</p>
+  {% endif %}
+</section>
+{% endblock %}

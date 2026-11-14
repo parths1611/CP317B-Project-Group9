@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}My Reservations · Car Rental System{% endblock %}
+
+{% macro res_row(r, past=false) %}
+<li class="res-item">
+  <span class="mono muted">{{ r.id|res_id }}</span>
+  <div>
+    <strong>{{ r.vehicle }}</strong>
+    <p class="muted small">{{ r.pickup_date|pretty_date }} → {{ r.return_date|pretty_date }} · {{ r.days }} day{{ 's' if r.days != 1 }}</p>
+    {% if not past %}
+      <p class="small muted">
+        {% if r.can_cancel %}Free cancellation until {{ r.cancel_deadline|pretty_date }}, {{ r.cancel_deadline.strftime('%I:%M %p') }}
+        {% elif r.rental_status == 'Active' %}Rental in progress
+        {% else %}Cancellation closed (less than 24 hours before pickup){% endif %}
+      </p>
+    {% endif %}
+  </div>
+  <div class="res-price">
+    {% if r.rental_status == 'Cancelled' %}<span aria-label="No charge">—</span>{% else %}<strong>${{ r.total_price }}</strong>{% endif %}
+    <span class="badge {{ 'badge-dark' if r.rental_status in ('Upcoming', 'Active') else 'badge-grey' if r.rental_status == 'Cancelled' else 'badge-outline' }}">{{ r.rental_status }}</span>
+  </div>
+  <div class="res-actions">
+    <a class="btn btn-outline btn-sm" href="{{ url_for('confirmation', reservation_id=r.id) }}" aria-label="View details for {{ r.id|res_id }}">View Details</a>
+    {% if not past and r.can_cancel %}
+      <a class="btn btn-danger btn-sm" href="{{ url_for('cancel_reservation', reservation_id=r.id) }}" aria-label="Cancel {{ r.id|res_id }}">Cancel</a>
+    {% endif %}
+  </div>
+</li>
+{% endmacro %}
+
+{% block content %}
+<h1 class="h1">My Reservations</h1>
+
+<section class="card pad" aria-labelledby="current-title">
+  <h2 class="section-label" id="current-title">Upcoming &amp; active</h2>
+  {% if current %}
+    <ul class="res-list">{% for r in current %}{{ res_row(r) }}{% endfor %}</ul>
+  {% else %}
+    <div class="empty">
+      <p><strong>You have no upcoming reservations.</strong></p>
+      <a class="btn btn-primary" href="{{ url_for('home') }}">Search cars</a>
+    </div>
+  {% endif %}
+</section>
+
+{% if past %}
+<section class="card pad" aria-labelledby="past-title">
+  <h2 class="section-label" id="past-title">Past reservations</h2>
+  <ul class="res-list">{% for r in past %}{{ res_row(r, past=true) }}{% endfor %}</ul>
+  <p class="small"><a href="{{ url_for('rental_history') }}">See your full rental history ›</a></p>
+</section>
+{% endif %}
+
+<p class="muted small">Cars are collected at 10:00 AM on the pickup day. Reservations can be cancelled free of charge up to 24 hours before pickup.</p>
+{% endblock %}

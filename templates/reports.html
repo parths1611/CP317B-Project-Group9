@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Vehicle Utilization · CRS Staff Portal{% endblock %}
+
+{% macro meter(value, label) -%}
+<div class="util">
+  <div class="bar" role="img" aria-label="{{ label }}: {{ (value * 100)|round|int }}%" title="{{ label }}: {{ (value * 100)|round|int }}%">
+    <span style="width: {{ [value * 100, 100]|min|round(1) }}%"></span>
+  </div>
+  <span class="util-pct">{{ (value * 100)|round|int }}%</span>
+</div>
+{%- endmacro %}
+
+{% macro service_badge(status) -%}
+  {% if status == 'Service due' %}<span class="badge badge-alert"><span aria-hidden="true">⚠ </span>Service due</span>
+  {% elif status == 'Service soon' %}<span class="badge badge-grey">Service soon</span>
+  {% elif status == 'In maintenance' %}<span class="badge badge-outline">In maintenance</span>
+  {% else %}<span class="badge badge-outline"><span aria-hidden="true">✓ </span>OK</span>{% endif %}
+{%- endmacro %}
+
+{% block content %}
+<div class="row-between page-head">
+  <h1 class="h1">Vehicle Utilization Report</h1>
+  <nav class="chips" aria-label="Report period">
+    <span class="muted small">Period:</span>
+    {% for n in [7, 30, 90] %}
+      <a href="{{ url_for('reports', days=n) }}" class="chip {{ 'on' if n == days }}" {% if n == days %}aria-current="true"{% endif %}>Last {{ n }} days</a>
+    {% endfor %}
+  </nav>
+</div>
+<p class="muted small">{{ start|pretty_date }} – {{ end|pretty_date }} ({{ days }} days)</p>
+
+<div class="stats">
+  <div class="card stat"><span class="section-label">Fleet utilization</span><strong>{{ (summary.utilization * 100)|round|int }}%</strong><span class="muted small">of car-days rented</span></div>
+  <div class="card stat"><span class="section-label">Rentals</span><strong>{{ summary.rentals }}</strong><span class="muted small">{{ summary.top.name ~ ' used most' if summary.top else 'None in this period' }}</span></div>
+  <div class="card stat"><span class="section-label">Km driven</span><strong>{{ "{:,}".format(summary.km_driven) }}</strong><span class="muted small">Logged returns</span></div>
+  <div class="card stat"><span class="section-label">Service due</span><strong>{{ summary.service_due }}</strong><span class="muted small">Over {{ "{:,}".format(10000) }} km since service</span></div>
+</div>
+
+{% if returns %}
+<section class="card pad" aria-labelledby="returns-title">
+  <h2 class="section-label" id="returns-title">Returns to log · {{ returns|length }}</h2>
+  <p class="small muted">Enter the km driven for each returned car. It's added to the car's odometer and counts toward its next service.</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th scope="col">ID</th><th scope="col">Customer</th><th scope="col">Vehicle</th><th scope="col">Returned</th><th scope="col">Km driven</th></tr></thead>
+    <tbody>
+    {% for r in returns %}
+      <tr>
+        <td class="mono muted">{{ r.id|res_id }}</td>
+        <td>{{ r.customer }}</td>
+        <td><strong>{{ r.vehicle }}</strong></td>
+        <td class="mono">{{ r.return_date }}</td>
+        <td>
+          <form method="post" action="{{ url_for('log_return', reservation_id=r.id) }}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="days" value="{{ days }}">
+            <label for="km-{{ r.id }}" class="sr-only">Km driven for {{ r.id|res_id }}</label>
+            <input id="km-{{ r.id }}" name="km" type="number" min="0" max="20000" step="1" required placeholder="e.g. 350">
+            <button class="btn btn-primary btn-sm">Save</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endif %}
+
+<section class="card pad" aria-labelledby="vehicles-title">
+  <h2 class="section-label" id="vehicles-title">By vehicle · most used first</h2>
+  <div class="table-wrap">
+  <table class="report-table">
+    <thead><tr>
+      <th scope="col">Vehicle</th><th scope="col" class="num">Rentals</th><th scope="col" class="num">Days rented</th>
+      <th scope="col">Utilization</th><th scope="col" class="num">Km driven</th><th scope="col" class="num">Odometer</th>
+      <th scope="col" class="num">Since service</th><th scope="col">Maintenance</th>
+    </tr></thead>
+    <tbody>
+    {% for v in vehicles %}
+      <tr>
+        <td><strong>{{ v.name }}</strong><br><span class="muted small">{{ v.id }} · {{ v.type }}</span></td>
+        <td class="num">{{ v.rentals }}</td>
+        <td class="num">{{ v.days_rented }}</td>
+        <td>{{ meter(v.utilization, v.name ~ ' utilization') }}</td>
+        <td class="num">{{ "{:,}".format(v.km_driven) }}</td>
+        <td class="num mono">{{ "{:,}".format(v.mileage_km) }}</td>
+        <td class="num mono">{{ "{:,}".format(v.km_since_service) }}</td>
+        <td>
+          <div class="service-cell">
+            {{ service_badge(v.maintenance) }}
+            {% if v.maintenance in ('Service due', 'Service soon', 'In maintenance') %}
+            <form method="post" action="{{ url_for('mark_serviced', vehicle_id=v.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="days" value="{{ days }}">
+              <button class="btn btn-outline btn-sm" aria-label="Mark {{ v.name }} as serviced">Mark serviced</button>
+            </form>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="card pad" aria-labelledby="types-title">
+  <h2 class="section-label" id="types-title">By vehicle type</h2>
+  <div class="table-wrap">
+  <table class="report-table">
+    <thead><tr><th scope="col">Type</th><th scope="col" class="num">Vehicles</th><th scope="col" class="num">Rentals</th>
+      <th scope="col" class="num">Days rented</th><th scope="col">Utilization</th><th scope="col" class="num">Km driven</th></tr></thead>
+    <tbody>
+    {% for t in by_type %}
+      <tr>
+        <td><strong>{{ t.type }}</strong></td>
+        <td class="num">{{ t.vehicles }}</td>
+        <td class="num">{{ t.rentals }}</td>
+        <td class="num">{{ t.days_rented }}</td>
+        <td>{{ meter(t.utilization, t.type ~ ' utilization') }}</td>
+        <td class="num">{{ "{:,}".format(t.km_driven) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<p class="muted small">Utilization = days rented in the period ÷ days in the period. Km driven counts rentals returned in the period. A service is due every 10,000 km; "Service soon" starts at 8,000 km.</p>
+{% endblock %}

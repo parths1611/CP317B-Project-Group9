@@ -22,12 +22,12 @@
   <nav aria-label="Main">
     {% if g.user.role == 'staff' %}
       {{ navlink('dashboard', 'Dashboard', ep == 'dashboard') }}
-      {{ navlink('planned', 'Vehicles', page == 'staff-vehicles', page='staff-vehicles') }}
+      {{ navlink('manage_vehicles', 'Vehicles', ep in ('manage_vehicles', 'add_vehicle', 'edit_vehicle')) }}
       {{ navlink('planned', 'Reservations', page == 'staff-reservations', page='staff-reservations') }}
-      {{ navlink('planned', 'Reports', page == 'staff-reports', page='staff-reports') }}
+      {{ navlink('reports', 'Reports', ep == 'reports') }}
     {% else %}
-      {{ navlink('home', 'Search Cars', ep in ('home', 'vehicle_details', 'confirmation')) }}
-      {{ navlink('planned', 'My Reservations', page == 'reservations', page='reservations') }}
+      {{ navlink('home', 'Search Cars', ep in ('home', 'vehicle_details')) }}
+      {{ navlink('my_reservations', 'My Reservations', ep in ('my_reservations', 'cancel_reservation', 'confirmation')) }}
       {{ navlink('rental_history', 'Rental History', ep == 'rental_history') }}
       {{ navlink('planned', 'Profile', page == 'profile', page='profile') }}
     {% endif %}
@@ -46,7 +46,7 @@
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% for cat, msg in messages %}
       <div class="alert alert-{{ cat }}" role="{{ 'alert' if cat == 'error' else 'status' }}">
-        <strong>{{ 'Error:' if cat == 'error' else 'Done:' }}</strong> {{ msg }}
+        <strong>{{ 'Error:' if cat == 'error' else 'Note:' if cat == 'warning' else 'Done:' }}</strong> {{ msg }}
       </div>
     {% endfor %}
   {% endwith %}

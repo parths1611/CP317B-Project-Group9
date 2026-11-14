@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Manage Vehicles · CRS Staff Portal{% endblock %}
+{% block content %}
+<div class="row-between page-head">
+  <h1 class="h1">Manage Vehicles</h1>
+  <a class="btn btn-primary" href="{{ url_for('add_vehicle') }}">+ Add Vehicle</a>
+</div>
+
+<section class="card pad">
+  <form method="get" action="{{ url_for('manage_vehicles') }}" class="filter-bar" role="search">
+    <div class="filter-q">
+      <label for="q" class="sr-only">Search vehicles</label>
+      <input id="q" name="q" type="search" value="{{ f.q }}" placeholder="Search by name, type, or ID…">
+    </div>
+    <div>
+      <label for="f-type" class="sr-only">Type</label>
+      <select id="f-type" name="type">
+        <option value="">All types</option>
+        {% for t in TYPES %}<option {% if t == f.type %}selected{% endif %}>{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="f-category" class="sr-only">Category</label>
+      <select id="f-category" name="category">
+        <option value="">All categories</option>
+        {% for c in CATEGORIES %}<option {% if c == f.category %}selected{% endif %}>{{ c }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="f-status" class="sr-only">Availability</label>
+      <select id="f-status" name="status">
+        <option value="">Any availability</option>
+        {% for st in STATUSES %}<option {% if st == f.status %}selected{% endif %}>{{ st }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="filter-actions">
+      <button class="btn btn-primary">Apply</button>
+      {% if f.q or f.type or f.category or f.status %}<a class="btn btn-outline" href="{{ url_for('manage_vehicles') }}">Clear</a>{% endif %}
+    </div>
+  </form>
+
+  {% if vehicles %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th scope="col">ID</th><th scope="col">Vehicle name</th><th scope="col">Type</th><th scope="col">Category</th>
+      <th scope="col" class="num">Price/day</th><th scope="col" class="num">Seats</th><th scope="col">Availability</th><th scope="col">Actions</th></tr></thead>
+    <tbody>
+    {% for v in vehicles %}
+      <tr>
+        <td class="mono muted">{{ v.id }}</td>
+        <td><strong>{{ v.name }}</strong></td>
+        <td>{{ v.type }}</td>
+        <td>{{ v.category }}</td>
+        <td class="num">${{ v.price_per_day }}</td>
+        <td class="num">{{ v.seats }}</td>
+        <td><span class="badge {{ 'badge-dark' if v.status == 'Available' else 'badge-outline' }}">{{ v.status }}</span></td>
+        <td>
+          <div class="row-actions">
+            <a class="btn btn-outline btn-sm" href="{{ url_for('edit_vehicle', vehicle_id=v.id) }}" aria-label="Edit {{ v.name }}">Edit</a>
+            <form method="post" action="{{ url_for('vehicle_status', vehicle_id=v.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              {% if v.status == 'Available' %}
+                <input type="hidden" name="status" value="Maintenance">
+                <button class="btn btn-sm" aria-label="Move {{ v.name }} to maintenance">Set to Maintenance</button>
+              {% else %}
+                <input type="hidden" name="status" value="Available">
+                <button class="btn btn-sm" aria-label="Make {{ v.name }} available">Set Available</button>
+              {% endif %}
+            </form>
+          </div>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="muted small table-foot">
+    {% if vehicles|length == total %}{{ total }} vehicles total{% else %}Showing {{ vehicles|length }} of {{ total }} vehicles{% endif %}
+  </p>
+  {% else %}
+    <p class="muted">No vehicles match those filters. <a href="{{ url_for('manage_vehicles') }}">Show all</a></p>
+  {% endif %}
+</section>
+<p class="muted small">Vehicles in Maintenance are hidden from customer search and can't be booked. Existing bookings are kept.</p>
+{% endblock %}

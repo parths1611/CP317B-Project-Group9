@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Cancel {{ r.id|res_id }} · Car Rental System{% endblock %}
+{% block content %}
+<section class="card pad confirm">
+  <h1 class="h1">Cancel reservation {{ r.id|res_id }}?</h1>
+
+  <dl class="summary confirm-summary">
+    <div><dt>Vehicle</dt><dd>{{ r.vehicle }} <span class="muted small">({{ r.type }} · {{ r.category }})</span></dd></div>
+    <div><dt>Pickup</dt><dd>{{ r.pickup_date|pretty_date }}</dd></div>
+    <div><dt>Return</dt><dd>{{ r.return_date|pretty_date }}</dd></div>
+    <div class="divider"><dt><strong>Total</strong></dt><dd><strong>${{ r.total_price }}</strong></dd></div>
+  </dl>
+
+  <p class="small">The car will be released for other customers. This can't be undone.</p>
+
+  <form method="post" action="{{ url_for('cancel_reservation', reservation_id=r.id) }}" class="btn-row">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="btn btn-danger-solid">Yes, cancel reservation</button>
+    <a class="btn btn-outline" href="{{ url_for('my_reservations') }}">Keep reservation</a>
+  </form>
+</section>
+{% endblock %}
