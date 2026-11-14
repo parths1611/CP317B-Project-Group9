@@ -1,16 +1,28 @@
-# Car Rental System: Sprint 1 Prototype
-CP317B, Group 9
+# Car Rental System
+CP317B, Group 9 · Sprint 1 and Sprint 2
 
-A working prototype built with Python, Flask and SQLite. It's styled after the Milestone 2 wireframes.
+A working car rental website built with Python, Flask and SQLite. It's styled after the Milestone 2 wireframes.
+
+## Get the code
+
+You need **Python 3.10 or newer** (check with `python3 --version` on Mac, or `py --version` on Windows).
+
+**Option A: Git (recommended).** In the VS Code terminal:
+
+```bash
+git clone https://github.com/parths1611/CP317B-Project-Group9.git
+cd CP317B-Project-Group9
+```
+
+**Option B: ZIP.** On the GitHub page click **Code → Download ZIP**, unzip it, and open the `CP317B-Project-Group9-main` folder in VS Code (**File → Open Folder**).
+
+All the commands below are run from inside that project folder, the one that contains `app.py`.
 
 ## Run it
-
-You need Python 3.10 or newer.
 
 **macOS / Linux**
 
 ```bash
-cd car-rental-system
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -20,19 +32,28 @@ python app.py
 **Windows (PowerShell)**
 
 ```powershell
-cd car-rental-system
 py -m venv venv
 venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python app.py
 ```
 
+If PowerShell says running scripts is disabled, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, answer `Y`, and try again.
+
 Then open http://127.0.0.1:5000 in your browser. Stop the server with `Ctrl+C`.
 
-- The database (`car_rental.db`) is created and filled with demo data the first time the app starts.
-- Older `car_rental.db` files are upgraded automatically when new columns are added, so the app won't crash on an old file. Delete it anyway to get the latest demo data.
-- **Delete `car_rental.db` before a demo.** The demo rentals are dated around the day the database was created, so a fresh file puts rentals on "today" again.
-- On a Mac, if port 5000 is already in use (AirPlay Receiver uses it), run `flask --app app run --port 5001` and open http://127.0.0.1:5001 instead.
+**Mac: if the page shows "403 Forbidden" or won't load**, AirPlay Receiver is using port 5000. Stop the app and run it on port 5001 instead with `flask --app app run --port 5001`, then open http://127.0.0.1:5001.
+
+The `venv` and `pip install` steps are only needed the first time. After that, just activate the environment (`source venv/bin/activate`, or `venv\Scripts\Activate.ps1` on Windows) and run `python app.py`.
+
+- The database (`car_rental.db`) is created and filled with demo data the first time the app starts. It isn't stored on GitHub.
+- **Delete `car_rental.db` before a demo**, and after pulling new code, to get the latest demo data. The demo rentals are dated around the day the database was created, so a fresh file puts rentals on "today" again. Stop the app first, then run `rm car_rental.db` (Mac) or `del car_rental.db` (Windows). It's rebuilt the next time you run the app.
+- Older `car_rental.db` files are upgraded automatically when new columns are added, so the app won't crash on an old file.
+
+## Get the latest version
+
+- **Git:** in the project folder run `git pull`, then delete `car_rental.db` and run the app again.
+- **ZIP:** download a new ZIP and use that folder. You'll need to redo the `venv` and `pip install` steps in the new folder.
 
 ## Logins
 
@@ -52,7 +73,7 @@ All demo accounts are created automatically. On the login page, use the button t
 
 **As a customer** (log in as `customer@example.com`):
 
-1. **Search:** you land on Search Cars. Pick pickup and return dates, and optionally a vehicle type and category, then click **Search Vehicles**. Only cars free for the whole period appear. The Volkswagen Golf never appears because it's in maintenance.
+1. **Search:** you land on Search Cars. Pick pickup and return dates, and optionally a vehicle type and category, then click **Search Vehicles**. Only cars free for the whole period appear. The Volkswagen Golf doesn't appear because it's in maintenance (until staff mark it serviced).
 2. **View details:** click **View Details** on a car to see its specs, daily price, and trip total.
 3. **Choose your days:** in the "When do you need it?" box, change the pickup or return date and click **Check availability**. The total and availability update. If you change a date without checking, the Reserve button is disabled until you do.
 4. **Reserve:** click **Reserve This Vehicle**. A confirmation page shows a reference number (e.g. `R-1007`), the dates, and the total.
@@ -81,7 +102,7 @@ python -m pytest -v
 
 There are 120 tests, and each one is tagged with the story it checks.
 
-## Sprint 1 stories → code
+## Stories → code
 
 | Story | What works | Where |
 |-------|------------|-------|
@@ -95,7 +116,7 @@ There are 120 tests, and each one is tagged with the story it checks.
 | VEH-01 Manage Vehicles *(Sprint 2)* | Staff see the whole fleet with search (name, type, ID) and type/category/availability filters, add vehicles (the next ID like V011 is assigned automatically), edit details and price, and switch a car between Available and Maintenance. Maintenance cars are hidden from customer search; staff get a warning if the car still has upcoming bookings. Price changes only affect new bookings | `db.py` → `list_vehicles`, `validate_vehicle`, `add_vehicle`, `update_vehicle`, `set_vehicle_status`; `app.py` → `manage_vehicles`, `add_vehicle`, `edit_vehicle`, `vehicle_status`; `templates/vehicles.html`, `vehicle_form.html` |
 | REP-01 Daily Rental Report | Staff pick any date to see every rental that day plus fleet stats. A Recent bookings panel shows new reservations (with their rental days) as soon as they're made | `db.py` → `daily_rentals`, `fleet_stats`; `templates/dashboard.html` |
 
-The nav links for later stories (Profile, staff Reservations) go to "Planned for Sprint 2/3" pages.
+The nav links for later stories (Profile, staff Reservations) go to "Planned" placeholder pages.
 
 ## Design notes worth mentioning in the report
 
@@ -112,5 +133,6 @@ db.py               schema, seed data, availability + report queries
 templates/          Jinja HTML pages
 static/style.css    styling (matches wireframes)
 tests/test_app.py   pytest suite
-screenshots/        screenshots for the Sprint 1 report
+screenshots/        screenshots for the sprint reports
+requirements.txt    Python packages (Flask, pytest)
 ```
