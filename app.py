@@ -375,10 +375,13 @@ def register_routes(app):
     @app.route("/staff/vehicles/<vehicle_id>/serviced", methods=["POST"])
     @login_required("staff")
     def mark_serviced(vehicle_id):
-        if not store.mark_serviced(store.get_db(), vehicle_id):
+        was = store.mark_serviced(store.get_db(), vehicle_id)
+        if was is None:
             abort(404)
-        flash(f"{vehicle_id} marked as serviced. Its service counter is back to 0 km.", "success")
-        return redirect(url_for("reports", days=report_days()))
+        flash(f"{vehicle_id} marked as serviced. Its service counter is back to 0 km."
+              + (" It's out of maintenance and back in customer search." if was == "Maintenance" else ""),
+              "success")
+        return redirect(url_for("reports", days=report_days(), _anchor=f"veh-{vehicle_id}"))
 
     # ------------------------------------------ VEH-01 manage vehicles (staff)
     @app.route("/staff/vehicles")

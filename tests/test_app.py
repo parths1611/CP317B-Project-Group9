@@ -615,12 +615,24 @@ def test_log_return_only_once_and_only_finished_rentals(client, app):
 def test_mark_serviced_resets_counter(client, app):
     staff_login(client)
     r = client.post("/staff/vehicles/V003/serviced", data={"csrf_token": csrf(client), "days": 7})
-    assert r.headers["Location"].endswith("/staff/reports?days=7")
+    assert r.headers["Location"].endswith("/staff/reports?days=7#veh-V003")
     v = vehicle(app, "V003")
     assert v["last_service_km"] == v["mileage_km"]
     vehicles, _, summary = report(app, 30)
     assert vehicles["V003"]["maintenance"] == "OK" and summary["service_due"] == 0
     assert client.post("/staff/vehicles/V999/serviced", data={"csrf_token": csrf(client)}).status_code == 404
+
+
+def test_mark_serviced_takes_car_out_of_maintenance(client, app):
+    staff_login(client)
+    assert vehicle(app, "V006")["status"] == "Maintenance"
+    r = client.post("/staff/vehicles/V006/serviced", data={"csrf_token": csrf(client), "days": 30},
+                    follow_redirects=True)
+    assert "out of maintenance" in r.get_data(as_text=True)
+    v = vehicle(app, "V006")
+    assert v["status"] == "Available" and v["last_service_km"] == v["mileage_km"]
+    vehicles, _, _ = report(app, 30)
+    assert vehicles["V006"]["maintenance"] == "OK"  # badge is OK, so the button is gone
 
 
 def test_report_actions_require_staff_and_csrf(client, app):

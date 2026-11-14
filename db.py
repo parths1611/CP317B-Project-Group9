@@ -624,10 +624,16 @@ def record_return(db, reservation_id, km, today):
 
 
 def mark_serviced(db, vehicle_id):
-    """Reset the service counter: the car was serviced at its current odometer reading."""
-    cur = db.execute("UPDATE vehicles SET last_service_km = mileage_km WHERE id = ?", (vehicle_id,))
+    """Reset the service counter: the car was serviced at its current odometer reading.
+    A car that was in Maintenance is done and goes back to Available.
+    Returns the car's status before the service, or None if there's no such car."""
+    row = db.execute("SELECT status FROM vehicles WHERE id = ?", (vehicle_id,)).fetchone()
+    if row is None:
+        return None
+    db.execute("UPDATE vehicles SET last_service_km = mileage_km, status = 'Available' WHERE id = ?",
+               (vehicle_id,))
     db.commit()
-    return cur.rowcount == 1
+    return row["status"]
 
 
 def fleet_stats(db, day):

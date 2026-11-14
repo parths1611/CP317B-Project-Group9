@@ -78,7 +78,7 @@
     </tr></thead>
     <tbody>
     {% for v in vehicles %}
-      <tr>
+      <tr id="veh-{{ v.id }}">
         <td><strong>{{ v.name }}</strong><br><span class="muted small">{{ v.id }} · {{ v.type }}</span></td>
         <td class="num">{{ v.rentals }}</td>
         <td class="num">{{ v.days_rented }}</td>
