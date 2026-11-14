@@ -344,19 +344,60 @@ def register_routes(app):
             abort(403)
         return render_template("planned.html", title=title, story=story, sprint=sprint, page=page)
 
-    @app.errorhandler(403)
-    def forbidden(_e):
-        return render_template("error.html", code=403,
-                               message="You don't have access to this page."), 403
 
-    @app.errorhandler(404)
-    def not_found(_e):
-        return render_template("error.html", code=404, message="Page not found."), 404
+  
 
-    @app.errorhandler(400)
-    def bad_request(e):
-        return render_template("error.html", code=400, message=e.description), 400
+  # ------------------------------------- REP-02 vehicle utilization (staff)
+  def report_days():
+      days = request.values.get("days", 30, type=int)
+      return days if days in store.REPORT_PERIODS else 30
 
+  @app.route("/staff/reports")
+  @login_required("staff")
+  def reports():
+      days = report_days()
+      db = store.get_db()
+      start, end = store.report_period(days, date.today())
+      vehicles, by_type, summary = store.utilization_report(db, start, end)
+      return render_template(
+          "reports.html", days=days, vehicles=vehicles, by_type=by_type, summary=summary,
+          start=date.fromisoformat(start), end=date.today(),
+          returns=store.returns_to_log(db, date.today().isoformat()))
 
-if __name__ == "__main__":
-    create_app().run(debug=True)
+  @app.route("/staff/reports/returns/<int:reservation_id>", methods=["POST"])
+  @login_required("staff")
+  def log_return(reservation_id):
+      km = request.form.get("km", type=int)
+      try:
+          store.record_return(store.get_db(), reservation_id, km, date.today().isoformat())
+          flash(f"Logged {km:,} km for R-{reservation_id}. The odometer has been updated.", "success")
+      except store.InvalidReturn as e:
+          flash(f"R-{reservation_id}: {e}", "error")
+      return redirect(url_for("reports", days=report_days()))
+
+  @app.route("/staff/vehicles/<vehicle_id>/serviced", methods=["POST"])
+  @login_required("staff")
+  def mark_serviced(vehicle_id):
+      if not store.mark_serviced(store.get_db(), vehicle_id):
+          abort(404)
+      flash(f"{vehicle_id} marked as serviced. Its service counter is back to 0 km.", "success")
+      return redirect(url_for("reports", days=report_days()))
+    
+  
+  @app.errorhandler(403)
+      
+      def forbidden(_e):
+          return render_template("error.html", code=403,
+                                 message="You don't have access to this page."), 403
+  
+      @app.errorhandler(404)
+      def not_found(_e):
+          return render_template("error.html", code=404, message="Page not found."), 404
+  
+      @app.errorhandler(400)
+      def bad_request(e):
+          return render_template("error.html", code=400, message=e.description), 400
+  
+  
+  if __name__ == "__main__":
+      create_app().run(debug=True)
