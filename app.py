@@ -397,6 +397,5 @@ def register_routes(app):
     def bad_request(e):
         return render_template("error.html", code=400, message=e.description), 400
     
-  
 if __name__ == "__main__":
   create_app().run(debug=True)
